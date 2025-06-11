@@ -67,47 +67,27 @@ def run_clustering(input_path, output_path, method=1):
             gmm = GaussianMixture(n_components=n_clusters, covariance_type="tied", random_state=42)
             labels = gmm.fit_predict(X_processed) + 1
         elif method == 6:
-            # Method 6: Advanced GMM with PowerTransformer and sophisticated feature engineering
+            # Method 6: Enhanced GMM with PowerTransformer, tied covariance, and feature augmentation
             scaler = PowerTransformer(method='yeo-johnson', standardize=True)
             X_transformed = scaler.fit_transform(X)
             
-            # Advanced feature augmentation: multiple approaches for dims 2&3
+            # Feature augmentation: emphasize 2nd and 3rd dimensions
             if n_dim >= 3:
-                dim2 = X_transformed[:, 1].reshape(-1, 1)  # 2nd dimension
-                dim3 = X_transformed[:, 2].reshape(-1, 1)  # 3rd dimension
-                
-                # Create multiple derived features
-                dim23_sum = (dim2 + dim3)  # Sum
-                dim23_diff = (dim2 - dim3)  # Difference
-                dim23_product = (dim2 * dim3)  # Product
-                
-                X_processed = np.hstack((X_transformed, dim2, dim3, dim23_sum, dim23_diff, dim23_product))
+                # Add emphasized 2nd and 3rd dimensions (indices 1 and 2)
+                X_dim_emphasized = X_transformed[:, [1, 2]]
+                X_processed = np.hstack((X_transformed, X_dim_emphasized))
             else:
                 X_processed = X_transformed
             
-            # Try multiple covariance types and select best based on BIC
-            best_gmm = None
-            best_bic = np.inf
-            
-            for cov_type in ['tied', 'full', 'diag']:
-                for seed in [42, 11, 99]:  # Multiple seeds for robustness
-                    gmm = GaussianMixture(
-                        n_components=n_clusters,
-                        covariance_type=cov_type,
-                        random_state=seed,
-                        n_init=30,
-                        max_iter=600,
-                        tol=1e-7,
-                        reg_covar=1e-6  # Small regularization for numerical stability
-                    )
-                    gmm.fit(X_processed)
-                    bic = gmm.bic(X_processed)
-                    
-                    if bic < best_bic:
-                        best_bic = bic
-                        best_gmm = gmm
-            
-            labels = best_gmm.predict(X_processed) + 1
+            gmm = GaussianMixture(
+                n_components=n_clusters,
+                covariance_type='tied',
+                random_state=42,  # Use consistent random state
+                n_init=25,  
+                max_iter=300,  
+                tol=1e-6  
+            )
+            labels = gmm.fit_predict(X_processed) + 1
         else:
             print(f"Error: Invalid method {method}. Please choose between 1-6.")
             return False
